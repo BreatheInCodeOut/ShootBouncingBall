@@ -1,0 +1,347 @@
+<!DOCTyPE html>
+<head>	
+	<style>
+		#svgBoard
+		{			
+			border:1px solid black;
+			width: 600px;
+			height:550px;			
+		}
+
+		#svgTarget
+		{	
+			border:1px solid black;		
+			width:30px;
+			height:30px;
+		}
+	</style>
+</head>
+<body>	
+	<svg version="1.1" xmlns="http://www.w3.org/2000/svg" id="svgBoard" preserveAspectRatio="none" viewbox = "0,0,600,550" style="background-color:black;">
+		<rect id = "Wall" x="0" y="520" width="600" height="30" style="fill:blue;stroke-width:0;stroke:black;fill-opacity:0.2;" />
+		<rect id = "tank" x="10" y="520" width="20" height="30" style="fill:gray;stroke-width:2;stroke:black;fill-opacity:0.5;" />
+	</svg>
+
+	Target:
+	<svg version="1.1" xmlns="http://www.w3.org/2000/svg" id="svgTarget" preserveAspectRatio="none">
+		<circle id = "circleTarget" cx = "15" cy="15" r = "15"/>	
+	</svg>
+	<br>LEVEL <input id = "txtLevel" type ="text" readonly value = ""/>
+	<br>SCORE <input id = "txtScore" type ="text" readonly value = "0"/>
+	<script type="text/JavaScript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script> 	
+	<script type="text/javascript">
+		var intCircles 		= 3;
+		var arrRadius		= new Array();
+		var arrColors		= new Array();
+		var arrSpeeds		= new Array();
+		var strColors		= "green,maroon,yellow,pink,lime,orange,red,darkblue";
+		var strRadius		= "15,25,35";
+		var strSpeeds		= "1,2,3,7";
+		var intVarySize		= 0;
+		var intGameOn		= 1;
+		var intBoardXLeft, intBoardYTop, intBoardXRight, intBoardYBottom;		
+		var intBombFired	= 0;
+		var xmlns = "http://www.w3.org/2000/svg";
+		var intTargetColor	= 0;
+		var intLevel		= 1;
+		var intScore		= 0;
+		var intHit		= 2;
+		var intMiss		= -1;
+
+		function fnMoveCircles(circleID)
+		{	
+			var objCircle = document.getElementById(circleID);
+
+			if(objCircle == undefined) {return;}
+
+			var x = parseInt(objCircle.getAttribute("cx"),10);
+			var y = parseInt(objCircle.getAttribute("cy"),10);
+			var curRadius = parseInt(objCircle.getAttribute("r"),10);
+						
+			if ( (x-curRadius) < intBoardXLeft )
+			{
+				var resetIncX = arrSpeeds[Math.floor(Math.random()*arrSpeeds.length)];				
+				objCircle.setAttribute("incX", resetIncX);
+				x = x + curRadius/2;				
+				curRadius=changeTartgetSize(curRadius);
+							
+			}
+			else if ( (x+curRadius) > intBoardXRight)
+			{
+				var resetIncX = arrSpeeds[Math.floor(Math.random()*arrSpeeds.length)]*-1;				
+				objCircle.setAttribute("incX", resetIncX);			
+			}			
+
+			if ( (y-curRadius) < intBoardYTop)
+			{
+				var resetIncY = arrSpeeds[Math.floor(Math.random()*arrSpeeds.length)];
+				objCircle.setAttribute("incY", resetIncY);
+				y = y + curRadius/2;
+				curRadius=changeTartgetSize(curRadius);
+			}
+			else if ( (y+curRadius) > intBoardYBottom)
+			{			
+				var resetIncY = arrSpeeds[Math.floor(Math.random()*arrSpeeds.length)]*-1;
+				objCircle.setAttribute("incY", resetIncY);
+			} 				
+
+			x = x + parseInt(objCircle.getAttribute("incX"),10);
+			y = y + parseInt(objCircle.getAttribute("incY"),10);			
+			objCircle.setAttribute("cx", x);
+			objCircle.setAttribute("cy", y);
+			objCircle.setAttribute("r", curRadius);
+			setTimeout("fnMoveCircles('" + circleID + "')",20);			
+		}
+
+		function getRandomX()
+		{
+			return Math.floor((Math.random()*intBoardXRight-intBoardXLeft)+1)+intBoardXLeft;
+		}
+
+		function getRandomY()
+		{
+			return Math.floor((Math.random()*intBoardYBottom-intBoardYTop)+1)+intBoardYTop;
+		}
+
+		function changeTartgetSize(curRadius)
+		{
+			return (intVarySize==1)?arrRadius[Math.floor(Math.random()*arrRadius.length)]:curRadius;
+		}
+		
+		function IncreaseWallSize()
+		{
+			var intDecreaseWallBy = 20;
+			var objWall = document.getElementById("Wall");
+			intBoardYBottom = intBoardYBottom - intDecreaseWallBy;
+			objWall.y.baseVal.value = objWall.y.baseVal.value - intDecreaseWallBy;
+			objWall.height.baseVal.value = objWall.height.baseVal.value + intDecreaseWallBy;
+
+			if ( objWall.y.baseVal.value <= $("#svgBoard").height()/3 )
+			{ 	
+				intGameOn = 0;
+				alert ("Game Over");
+				clearCircles();
+				return; 				
+			}
+		}
+		
+		function checkLevelCompletion()
+		{				
+			for(intChk=0;intChk <= jQuery("#svgBoard circle").length-1; intChk++)
+			{ 	
+				var objCheck = document.getElementById(jQuery("#svgBoard circle").eq(intChk).attr("id"));
+				var TgtColor = objCheck.getAttribute("targetColor");				
+				
+				if ( TgtColor != undefined && TgtColor == intTargetColor )
+				{
+					return false;
+				}
+			}
+			
+			if ( intLevel == 5)
+			{
+				alert ("Game Completed");
+				clearCircles();
+			}
+			else
+			{
+				alert ( "Level Completed" );
+				clearCircles();
+				intLevel++;				
+				LoadLevel();
+				generateCirclesforNewLevel();
+			}
+		}	
+
+		function clearCircles()
+		{	
+			while ( jQuery("#svgBoard circle").length-1 > -1 )
+			{
+				var objCheck = document.getElementById(jQuery("#svgBoard circle").eq(0).attr("id"));
+				document.getElementById("svgBoard").removeChild(objCheck);
+			}
+		}	
+
+		function LoadLevel()
+		{
+			if (intLevel == 1)
+			{
+				arrColors.push(strColors.split(",")[0]);
+				arrSpeeds.push(strSpeeds.split(",")[0]);				 
+				arrRadius.push(strRadius.split(",")[0]);
+			}
+			else if (intLevel == 2)
+			{								
+				arrColors = strColors.split(",");
+				intCircles = intCircles + 2;				
+			}
+			else if (intLevel == 3)
+			{
+				arrSpeeds.push(strSpeeds.split(",")[1]);
+				arrRadius = strRadius.split(",");		
+				intCircles = intCircles + 2;
+			}
+			else if (intLevel == 4)
+			{
+				arrSpeeds = strSpeeds.split(",");
+				intVarySize = 1;
+				intCircles = intCircles + 2;
+			}
+			else if (intLevel == 5)
+			{				
+				intCircles = intCircles + 2;
+			}	
+
+			jQuery("#txtLevel").attr("value",intLevel);
+		}
+
+		function fireBomb()
+		{
+			var objBomb = document.getElementById("circleBomb");
+			if ( objBomb == undefined ){return;}			
+			var x = parseInt(objBomb.getAttribute("cx"),10);
+			var y = parseInt(objBomb.getAttribute("cy"),10);			
+			y = y-1;
+			
+			if ( y < intBoardYTop)
+			{					
+				document.getElementById("svgBoard").removeChild(objBomb);
+				intBombFired = 0;	
+				IncreaseWallSize();
+				UpdateScore(intMiss);
+			}
+			else
+			{
+				objBomb.setAttribute("cy", y);
+				setTimeout("fireBomb()",1);				
+			}
+
+			for(intChk=0;intChk <= jQuery("#svgBoard circle").length-1; intChk++)
+			{ 					
+				var objCheck = document.getElementById(jQuery("#svgBoard circle").eq(intChk).attr("id")); 
+				if (objCheck.id == objBomb.id){continue;}
+				//Collision detection
+				var deltaX = objBomb.cx.baseVal.value - objCheck.cx.baseVal.value;
+  				var deltaY = objBomb.cy.baseVal.value - objCheck.cy.baseVal.value;
+  				var distance = Math.sqrt( (deltaX*deltaX) + (deltaY*deltaY) ); // The classic distance-between-two-points formula.
+  				var radiusA = objBomb.r.baseVal.value; // The radius of circle A.
+  				var radiusB = objCheck.r.baseVal.value; // The radius of circle B.
+        			
+  				if ( distance <= (radiusA + radiusB) )
+				{		
+					intBombFired = 0;					
+					document.getElementById("svgBoard").removeChild(objBomb);					
+
+					if ( intTargetColor != 	objCheck.getAttribute("targetColor") )
+					{						
+						document.getElementById("svgBoard").removeChild(objCheck);
+						UpdateScore(intMiss);
+						IncreaseWallSize();
+					}
+					else
+					{						
+						document.getElementById("svgBoard").removeChild(objCheck);
+						UpdateScore(intHit);
+						checkLevelCompletion();
+					}										
+					return;
+				}				
+			}
+		}
+		
+		function UpdateScore(intScore)
+		{
+			jQuery("#txtScore").attr("value",parseInt(jQuery("#txtScore").attr("value"),10)+intScore);
+		}
+
+		function generateCirclesforNewLevel()
+		{
+			//Create the circles
+			for(intCreate=0;intCreate <= intCircles-1; intCreate++)
+			{
+				var objCircle = document.createElementNS(xmlns, "circle");		
+				objCircle.setAttribute("id", "svgcircle" + intCreate);
+				objCircle.setAttribute("cx", getRandomX());
+				objCircle.setAttribute("cy", getRandomY());
+				objCircle.setAttribute("r", arrRadius[Math.floor(Math.random()*arrRadius.length)] );
+				var rand = Math.floor((Math.random()*arrColors.length-1)+1);
+				objCircle.setAttribute("fill", arrColors[rand].toString());
+				objCircle.setAttribute("stroke-width","1px");
+				objCircle.setAttribute("incX", arrSpeeds[Math.floor(Math.random()*arrSpeeds.length)]);
+				objCircle.setAttribute("incY", arrSpeeds[Math.floor(Math.random()*arrSpeeds.length)]);
+				objCircle.setAttribute("target",1);
+				objCircle.setAttribute("targetColor",rand);
+				$("#svgBoard").append(objCircle);
+				setTimeout("fnMoveCircles('svgcircle" + intCreate + "')",20);
+				intTargetColor = rand;					
+			}
+
+			var objTgt = document.getElementById("circleTarget");
+			objTgt.setAttribute("fill", arrColors[rand].toString());
+			
+		}
+
+		(function ($) {
+	            
+	            $(document).ready
+	            (                 
+	                function () {			
+				intBoardXLeft  	= 0;
+				intBoardYTop   	= 0;		
+				intBoardXRight 	= $("#svgBoard").width();
+				intBoardYBottom = $("#svgBoard").height()-30;
+				LoadLevel();
+				generateCirclesforNewLevel();
+
+				$("body").keydown
+				(
+					function (event) {
+						
+						if ( intGameOn == 1 ) {
+
+							if (event.keyCode == 37 ){ //left arrow key
+	
+								var objRect = document.getElementById("tank");
+								var x = parseInt(objRect.getAttribute("x"),10); 
+								
+								if ( (x-objRect.width.baseVal.value) > 3 )
+								{
+									objRect.x.baseVal.value = x-objRect.width.baseVal.value;								
+								}
+							}
+							else if (event.keyCode == 39){//right arrow key
+	
+								var objRect = document.getElementById("tank");
+								var x = parseInt(objRect.getAttribute("x"),10);
+								if ( (x+objRect.width.baseVal.value*2) < $("#svgBoard").width() )
+								{									
+									objRect.x.baseVal.value = x+objRect.width.baseVal.value;					        
+								}
+							}
+							else if (event.keyCode == 38 && intBombFired == 0) {//Up arrow key
+						
+								var objNewBomb = document.createElementNS(xmlns, "circle");
+								var svg = document.querySelector("svgBoard");
+								var objRect = document.getElementById("tank");							
+								var intBombR = 8;
+								objNewBomb.setAttribute("id", "circleBomb");							
+								objNewBomb.setAttribute("r", intBombR );							
+								objNewBomb.setAttribute("fill", "black");								
+								objNewBomb.setAttribute("stroke", "red");
+								objNewBomb.setAttribute("stroke-width","2px");
+								objNewBomb.setAttribute("cx", objRect.x.baseVal.value);
+								objNewBomb.setAttribute("cy", objRect.y.baseVal.value-intBombR);
+								$("#svgBoard").append(objNewBomb);							
+								intBombFired = 1;
+								fireBomb();
+							}		
+						}				
+					}
+				);
+			}			
+		    )
+		}) (jQuery);
+	</script>
+	<!-- Created By Rajesh S-->
+</body>
+</html>
